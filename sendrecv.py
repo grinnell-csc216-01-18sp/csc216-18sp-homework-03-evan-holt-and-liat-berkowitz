@@ -91,15 +91,37 @@ class AltReceiver(BaseReceiver):
             self.send_to_network(Segment('NAK', "sender"))
         elif seg.msg.endswith(str(int(self.state == True))):
             self.send_to_network(Segment('ACK', "sender"))
-            self.send_to_app(seg.msg)
+            self.send_to_app(seg.msg[:-1])
             self.state = not self.state
         else:
             self.send_to_network(Segment('ACK', "sender"))
 
 class GBNSender(BaseSender):
-    # TODO: fill me in!
-    pass
+    def __init__(self, app_interval):
+        super(GBNSender, self).__init__(app_interval)
+        self.cursegs = []
+        self.msgcounter = 0
+
+    def receive_from_app(self, msg):
+        seg = Segment(msg + str(self.msgcounter), "receiver")
+        self.cursegs.append(seg)
+        self.msgcounter += 1
+        self.send_to_network(seg)
+
+    def receive_from_network(self, seg):
+        if seg.msg == '<CORRUPTED>' or seg.msg[:3] == 'NAK':
+            self.start_timer(10)
+            for segment in self.cursegs:
+                self.send_to_network(segment)
+        else:
+            pass
+
+    def on_interrupt(self):
+        pass
 
 class GBNReceiver(BaseReceiver):
-    # TODO: fill me in!
-    pass
+    def __init__(self):
+        super(GBNReceiver, self).__init__()
+
+    def receive_from_client(self, seg):
+        pass
