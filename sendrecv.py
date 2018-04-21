@@ -67,34 +67,34 @@ class AltSender(BaseSender):
 
     def receive_from_app(self, msg):
         if not self.custom_enabled:
-            self.curseg = Segment(msg + int(self.state == True), 'received')
-            self.send_to_network(curseg)
+            self.curseg = Segment(msg + str(int(self.state == True)), 'receiver')
+            self.send_to_network(self.curseg)
             self.start_timer(10)
 
     def receive_from_network(self, seg):
         if seg.msg == 'ACK':
             self.custom_enabled = False
-            self.state = not(self.state)
-            self.send_to_app(seg.msg)
-        else:
-            self.send_to_network(curseg)
-
-    def on_interrupt(self):
-        self.send_to_network(curseg)
-
-class AltReceiver(BaseReceiver):
-    def __init__(self, app_interval):
-        super(AltReceiver, self).__init__(app_interval)
-        self.state = False # true is state 1 and false is state 0
-
-    def receive_from_cleint(self, seg):
-        if seg.msg == '<CORRUPTED>':
-            self.send_to_network('NAK')
-        elif seg.msg.endswith(int(self.state == True)):
-            self.send_to_network('ACK')
             self.state = not self.state
         else:
-            self.send_to_network('ACK')
+            self.send_to_network(self.curseg)
+
+    def on_interrupt(self):
+        self.send_to_network(self.curseg)
+
+class AltReceiver(BaseReceiver):
+    def __init__(self):
+        super(AltReceiver, self).__init__()
+        self.state = False # true is state 1 and false is state 0
+
+    def receive_from_client(self, seg):
+        if seg.msg == '<CORRUPTED>':
+            self.send_to_network(Segment('NAK', "sender"))
+        elif seg.msg.endswith(str(int(self.state == True))):
+            self.send_to_network(Segment('ACK', "sender"))
+            self.send_to_app(seg.msg)
+            self.state = not self.state
+        else:
+            self.send_to_network(Segment('ACK', "sender"))
 
 class GBNSender(BaseSender):
     # TODO: fill me in!
