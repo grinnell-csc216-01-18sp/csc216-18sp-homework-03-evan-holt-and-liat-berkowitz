@@ -31,6 +31,6 @@ optional arguments:
 
 ## Repository Information
 
-* *(Your names and Grinnell IDs)*
-* *(The version of Python that you used)*
+* Evan Holt (holtevan) and Liat Berkowitz (berkowit)
+* Used Python 2
 * *(List of external resources that you consulted)*
