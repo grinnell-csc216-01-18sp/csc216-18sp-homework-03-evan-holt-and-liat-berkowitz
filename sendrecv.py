@@ -67,15 +67,19 @@ class AltSender(BaseSender):
 
     def receive_from_app(self, msg):
         if not self.custom_enabled:
-            self.curseg = Segment(msg + str(int(self.state == True)), 'receiver')
+            self.curseg = Segment(msg + str(int(self.state)), 'receiver')
             self.send_to_network(self.curseg)
             self.start_timer(10)
+        else:
+            print("dropped " + msg)
 
     def receive_from_network(self, seg):
+        print("received " + seg.msg)
         if seg.msg == 'ACK':
             self.custom_enabled = False
             self.state = not self.state
         else:
+            self.start_timer(10)
             self.send_to_network(self.curseg)
 
     def on_interrupt(self):
@@ -87,9 +91,10 @@ class AltReceiver(BaseReceiver):
         self.state = False # true is state 1 and false is state 0
 
     def receive_from_client(self, seg):
+        #print("received " + seg.msg[:-1])
         if seg.msg == '<CORRUPTED>':
             self.send_to_network(Segment('NAK', "sender"))
-        elif seg.msg.endswith(str(int(self.state == True))):
+        elif seg.msg.endswith(str(int(self.state))):
             self.send_to_network(Segment('ACK', "sender"))
             self.send_to_app(seg.msg[:-1])
             self.state = not self.state
@@ -107,17 +112,28 @@ class GBNSender(BaseSender):
         self.cursegs.append(seg)
         self.msgcounter += 1
         self.send_to_network(seg)
+        if not self.custom_enabled:
+            self.start_timer(10)
 
     def receive_from_network(self, seg):
-        if seg.msg == '<CORRUPTED>' or seg.msg[:3] == 'NAK':
+        if seg.msg == '<CORRUPTED>':
             self.start_timer(10)
             for segment in self.cursegs:
                 self.send_to_network(segment)
         else:
-            pass
+            acknum = seg.msg[len(seg.msg)-1]
+            while len(self.cursegs) != 0:
+                segment = self.cursegs[0]
+                if int(segment.msg[len(segment.msg)-1]) <= int(acknum):
+                    self.cursegs.pop()
+                else:
+                    self.start_timer(10)
+                    break
 
     def on_interrupt(self):
-        pass
+        self.start_timer(10)
+        for segment in self.cursegs:
+            self.send_to_network(segment)
 
 class GBNReceiver(BaseReceiver):
     def __init__(self):
@@ -125,4 +141,7 @@ class GBNReceiver(BaseReceiver):
         self.lastreceived = -1
 
     def receive_from_client(self, seg):
-        
+        if seg.msg.endswith(str(self.lastreceived + 1)):
+            self.lastreceived += 1
+            self.send_to_network(Segment("ACK " + str(self.lastreceived), "sender"))
+
