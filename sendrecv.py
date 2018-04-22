@@ -122,6 +122,7 @@ class GBNSender(BaseSender):
 class GBNReceiver(BaseReceiver):
     def __init__(self):
         super(GBNReceiver, self).__init__()
+        self.lastreceived = -1
 
     def receive_from_client(self, seg):
-        pass
+        
