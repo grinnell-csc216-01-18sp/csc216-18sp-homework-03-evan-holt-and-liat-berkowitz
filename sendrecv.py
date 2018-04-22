@@ -67,23 +67,22 @@ class AltSender(BaseSender):
 
     def receive_from_app(self, msg):
         if not self.custom_enabled:
-            self.curseg = Segment(msg + str(int(self.state)), 'receiver')
-            self.send_to_network(self.curseg)
-            self.start_timer(10)
-        else:
-            print("dropped " + msg)
+            self.curseg = msg + str(int(self.state))
+            self.send_to_network(Segment(self.curseg, 'receiver'))
+            self.start_timer(5)
 
     def receive_from_network(self, seg):
-        print("received " + seg.msg)
         if seg.msg == 'ACK':
             self.custom_enabled = False
+            self.custom_timer = 0
             self.state = not self.state
         else:
-            self.start_timer(10)
-            self.send_to_network(self.curseg)
+            self.start_timer(5)
+            self.send_to_network(Segment(self.curseg, 'receiver'))
 
     def on_interrupt(self):
-        self.send_to_network(self.curseg)
+        self.start_timer(5)
+        self.send_to_network(Segment(self.curseg, 'receiver'))
 
 class AltReceiver(BaseReceiver):
     def __init__(self):
@@ -91,15 +90,14 @@ class AltReceiver(BaseReceiver):
         self.state = False # true is state 1 and false is state 0
 
     def receive_from_client(self, seg):
-        #print("received " + seg.msg[:-1])
         if seg.msg == '<CORRUPTED>':
-            self.send_to_network(Segment('NAK', "sender"))
+            self.send_to_network(Segment('NAK', 'sender'))
         elif seg.msg.endswith(str(int(self.state))):
-            self.send_to_network(Segment('ACK', "sender"))
+            self.send_to_network(Segment('ACK', 'sender'))
             self.send_to_app(seg.msg[:-1])
             self.state = not self.state
         else:
-            self.send_to_network(Segment('ACK', "sender"))
+            self.send_to_network(Segment('ACK', 'sender'))
 
 class GBNSender(BaseSender):
     def __init__(self, app_interval):
@@ -108,32 +106,33 @@ class GBNSender(BaseSender):
         self.msgcounter = 0
 
     def receive_from_app(self, msg):
-        seg = Segment(msg + str(self.msgcounter), "receiver")
-        self.cursegs.append(seg)
+        seg = Segment(msg + '{{{' + str(self.msgcounter), 'receiver')
+        self.cursegs.append(seg.msg)
         self.msgcounter += 1
         self.send_to_network(seg)
         if not self.custom_enabled:
-            self.start_timer(10)
+            self.start_timer(5)
 
     def receive_from_network(self, seg):
         if seg.msg == '<CORRUPTED>':
-            self.start_timer(10)
+            self.start_timer(5)
             for segment in self.cursegs:
-                self.send_to_network(segment)
+                self.send_to_network(Segment(segment, 'receiver'))
         else:
-            acknum = seg.msg[len(seg.msg)-1]
+            acknum = int(seg.msg[seg.msg.find('{{{') + 3:])
             while len(self.cursegs) != 0:
                 segment = self.cursegs[0]
-                if int(segment.msg[len(segment.msg)-1]) <= int(acknum):
-                    self.cursegs.pop()
+                packetnum = int(segment[segment.find('{{{') + 3:])
+                if packetnum <= acknum:
+                    self.cursegs.pop(0)
                 else:
-                    self.start_timer(10)
+                    self.start_timer(5)
                     break
 
     def on_interrupt(self):
-        self.start_timer(10)
+        self.start_timer(5)
         for segment in self.cursegs:
-            self.send_to_network(segment)
+            self.send_to_network(Segment(segment, 'receiver'))
 
 class GBNReceiver(BaseReceiver):
     def __init__(self):
@@ -143,4 +142,5 @@ class GBNReceiver(BaseReceiver):
     def receive_from_client(self, seg):
         if seg.msg.endswith(str(self.lastreceived + 1)):
             self.lastreceived += 1
-            self.send_to_network(Segment("ACK " + str(self.lastreceived), "sender"))
+            self.send_to_network(Segment('ACK ' + '{{{' + str(self.lastreceived), 'sender'))
+            self.send_to_app(seg.msg[:seg.msg.find('{{{')])
