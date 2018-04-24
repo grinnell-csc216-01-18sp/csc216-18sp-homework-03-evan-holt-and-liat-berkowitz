@@ -115,6 +115,7 @@ class GBNSender(BaseSender):
 
     def receive_from_app(self, msg):
         if self.sess:
+            print('receive from app if')
             seg = Segment(msg + '{{{' + str(self.msgcounter), 'receiver')
             self.cursegs.append(seg.msg)
             self.msgcounter += 1
@@ -122,15 +123,17 @@ class GBNSender(BaseSender):
             if not self.custom_enabled:
                 self.start_timer(5)
         else:
+            print('requesting session')
             self.send_to_network(Segment('request for session', 'receiver'))
             self.start_timer(5)
 
     def receive_from_network(self, seg):
         if seg.msg == 'request granted':
+            print("request granted")
             self.custom_enabled = False
             self.custom_timer = 0
             self.sess = True
-            self.send_to_netowrk('rogerdoger', 'receiver')
+            self.send_to_network('rogerdoger', 'receiver')
         if seg.msg == '<CORRUPTED>':
             self.start_timer(5)
             for segment in self.cursegs:
@@ -162,7 +165,10 @@ class GBNReceiver(BaseReceiver):
 
     def receive_from_client(self, seg):
         if seg.msg == 'request for session':
+            print('request for session')
             self.send_to_network(Segment('request granted', 'sender'))
+            #tmp = Segement('request granted', 'sender')
+            #print tmp.msg
         if seg.msg.endswith(str(self.lastreceived + 1)):
             self.lastreceived += 1
             self.send_to_network(Segment('ACK ' + '{{{' + str(self.lastreceived), 'sender'))
