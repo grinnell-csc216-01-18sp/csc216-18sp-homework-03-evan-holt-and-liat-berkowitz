@@ -56,17 +56,18 @@ class Simulation:
 
     def run(self, n):
         step = 1
-        self.sender.receive_from_app('anything')
-        print('just sent anything')
         while True:
             if not self.network_queue.empty():
                 if peek(self.network_queue)[1] == 'rogerdoger':
                     break
+            self.sender.step()
             self.receiver.step()
             if not self.sender.output_queue.empty():
-                self.network_queue.put( (step + self.net_delay, self.sender.output_queue.get()) )
+                self.push_to_network(step, self.sender.output_queue.get())
+                #self.network_queue.put( (step + self.net_delay, self.sender.output_queue.get()) )
             if not self.receiver.output_queue.empty():
-                self.network_queue.put( (step + self.net_delay, self.receiver.output_queue.get()) )
+                self.push_to_network(step, self.receiver.output_queue.get())
+                #self.network_queue.put( (step + self.net_delay, self.receiver.output_queue.get()) )
             step += 1
         self.network_queue.get()
         for step in range(1, n+1):
@@ -94,7 +95,6 @@ class Simulation:
                 self.push_to_network(step, self.receiver.output_queue.get())
 
 def main():
-    print('top of main')
     parser = argparse.ArgumentParser(
             description='Simulates transportation layer network traffic.')
     parser.add_argument('--app-delay',
@@ -121,11 +121,7 @@ def main():
     else:
         raise RuntimeError('Unknown protocol specified: {}'.format(args.protocol))
     sim = Simulation(sender, receiver, args.net_delay, args.corr_prob, args.drop_prob)
-    print('about to call run')
     sim.run(args.steps)
 
-print('wtf')
-
 if __name__ == '__main__':
-    print('checking if main')
     main()

@@ -18,6 +18,7 @@ class BaseSender(object):
         self.custom_enabled  = False
         self.custom_interval = 0
         self.custom_timer    = 0
+        self.sess            = False
 
     def send_to_network(self, seg):
         self.output_queue.put(seg)
@@ -25,7 +26,8 @@ class BaseSender(object):
     def step(self):
         self.app_timer += 1
         if self.app_timer >= self.app_interval:
-            self.app_count += 1
+            if self.sess:
+                self.app_count += 1
             self.receive_from_app('message {}'.format(self.app_count))
             self.app_timer = 0
         if not self.input_queue.empty():

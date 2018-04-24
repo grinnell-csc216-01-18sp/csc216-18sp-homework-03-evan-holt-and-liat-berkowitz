@@ -111,11 +111,9 @@ class GBNSender(BaseSender):
         super(GBNSender, self).__init__(app_interval)
         self.cursegs = []
         self.msgcounter = 0
-        self.sess = False
 
     def receive_from_app(self, msg):
         if self.sess:
-            print('receive from app if')
             seg = Segment(msg + '{{{' + str(self.msgcounter), 'receiver')
             self.cursegs.append(seg.msg)
             self.msgcounter += 1
@@ -123,9 +121,10 @@ class GBNSender(BaseSender):
             if not self.custom_enabled:
                 self.start_timer(5)
         else:
-            print('requesting session')
-            self.send_to_network(Segment('request for session', 'receiver'))
-            self.start_timer(5)
+            if not self.custom_enabled:
+                print('requesting session')
+                self.send_to_network(Segment('request for session', 'receiver'))
+                self.start_timer(5)
 
     def receive_from_network(self, seg):
         if seg.msg == 'request granted':
@@ -164,6 +163,7 @@ class GBNReceiver(BaseReceiver):
         self.lastreceived = -1
 
     def receive_from_client(self, seg):
+        print('got something')
         if seg.msg == 'request for session':
             print('request for session')
             self.send_to_network(Segment('request granted', 'sender'))
