@@ -47,6 +47,9 @@ class NaiveSender(BaseSender):
         if self.sess:
             seg = Segment(msg, 'receiver')
             self.send_to_network(seg)
+        elif self.sess is None:
+            if not self.custom_enabled:
+                self.send_to_network(Segment('request to close session', 'receiver'))
         else:
             if not self.custom_enabled:
                 self.send_to_network(Segment('request for session', 'receiver'))
@@ -56,8 +59,11 @@ class NaiveSender(BaseSender):
         if seg.msg == 'request granted':
             self.custom_enabled = False
             self.custom_timer = 0
-            self.sess = True
-            self.send_to_network(Segment('rogerdoger', 'receiver'))
+            if self.sess is None:
+                self.send_to_network(Segment('dogerroger', 'receiver'))
+            else:
+                self.sess = True
+                self.send_to_network(Segment('rogerdoger', 'receiver'))
 
     def on_interrupt(self):
         print('Could not establish connection')
@@ -68,7 +74,7 @@ class NaiveReceiver(BaseReceiver):
         super(NaiveReceiver, self).__init__()
 
     def receive_from_client(self, seg):
-        if seg.msg == 'request for session':
+        if seg.msg == 'request for session' or seg.msg == 'request to close session':
             self.send_to_network(Segment('request granted', 'sender'))
         else:
             self.send_to_app(seg.msg)
@@ -85,6 +91,10 @@ class AltSender(BaseSender):
                 self.curseg = msg + str(int(self.state))
                 self.send_to_network(Segment(self.curseg, 'receiver'))
                 self.start_timer(5)
+        elif self.sess is None:
+            if not self.custom_enabled:
+                self.send_to_network(Segment('request to close session', 'receiver'))
+                self.start_timer(5)
         else:
             if not self.custom_enabled:
                 self.send_to_network(Segment('request for session', 'receiver'))
@@ -94,8 +104,11 @@ class AltSender(BaseSender):
         if seg.msg == 'request granted':
             self.custom_enabled = False
             self.custom_timer = 0
-            self.sess = True
-            self.send_to_network(Segment('rogerdoger', 'receiver'))
+            if self.sess is None:
+                self.send_to_network(Segment('dogerroger', 'receiver'))
+            else:
+                self.sess = True
+                self.send_to_network(Segment('rogerdoger', 'receiver'))
         elif seg.msg == 'ACK':
             self.custom_enabled = False
             self.custom_timer = 0
@@ -105,7 +118,10 @@ class AltSender(BaseSender):
             self.start_timer(5)
 
     def on_interrupt(self):
-        if self.sess == False:
+        if self.sess is None:
+            self.send_to_network(Segment('request to close session', 'receiver'))
+            self.start_timer(5)
+        elif self.sess == False:
             self.send_to_network(Segment('request for session', 'receiver'))
             self.start_timer(5)
         else:
@@ -118,7 +134,7 @@ class AltReceiver(BaseReceiver):
         self.state = False # true is state 1 and false is state 0
 
     def receive_from_client(self, seg):
-        if seg.msg == 'request for session':
+        if seg.msg == 'request for session' or seg.msg == 'request to close session':
             self.send_to_network(Segment('request granted', 'sender'))
         elif seg.msg == '<CORRUPTED>':
             self.send_to_network(Segment('NAK', 'sender'))
@@ -143,6 +159,10 @@ class GBNSender(BaseSender):
             self.send_to_network(seg)
             if not self.custom_enabled:
                 self.start_timer(5)
+        elif self.sess is None:
+            if not self.custom_enabled:
+                self.send_to_network(Segment('request to close session', 'receiver'))
+                self.start_timer(5)
         else:
             if not self.custom_enabled:
                 self.send_to_network(Segment('request for session', 'receiver'))
@@ -152,8 +172,11 @@ class GBNSender(BaseSender):
         if seg.msg == 'request granted':
             self.custom_enabled = False
             self.custom_timer = 0
-            self.sess = True
-            self.send_to_network(Segment('rogerdoger', 'receiver'))
+            if self.sess is None:
+                self.send_to_network(Segment('dogerroger', 'receiver'))
+            else:
+                self.sess = True
+                self.send_to_network(Segment('rogerdoger', 'receiver'))
         elif seg.msg == '<CORRUPTED>':
             self.start_timer(5)
             for segment in self.cursegs:
@@ -170,7 +193,10 @@ class GBNSender(BaseSender):
                     break
 
     def on_interrupt(self):
-        if self.sess == False:
+        if self.sess is None:
+            self.send_to_network(Segment('request to close session', 'receiver'))
+            self.start_timer(5)
+        elif self.sess == False:
             self.send_to_network(Segment('request for session', 'receiver'))
             self.start_timer(5)
         else:
@@ -184,7 +210,7 @@ class GBNReceiver(BaseReceiver):
         self.lastreceived = -1
 
     def receive_from_client(self, seg):
-        if seg.msg == 'request for session':
+        if seg.msg == 'request for session' or seg.msg == 'request to close session':
             self.send_to_network(Segment('request granted', 'sender'))
         elif seg.msg.endswith(str(self.lastreceived + 1)):
             self.lastreceived += 1

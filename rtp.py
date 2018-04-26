@@ -55,6 +55,7 @@ class Simulation:
             self.network_queue.put( (step + self.net_delay, seg) )
 
     def run(self, n):
+        # Set up a connection between sender and receiver
         step = 1
         while True:
             self.sender.step()
@@ -75,10 +76,8 @@ class Simulation:
             
             if not self.sender.output_queue.empty():
                 self.push_to_network(step, self.sender.output_queue.get())
-                #self.network_queue.put( (step + self.net_delay, self.sender.output_queue.get()) )
             if not self.receiver.output_queue.empty():
                 self.push_to_network(step, self.receiver.output_queue.get())
-                #self.network_queue.put( (step + self.net_delay, self.receiver.output_queue.get()) )
             step += 1
         
         for step in range(1, n+1):
@@ -104,6 +103,43 @@ class Simulation:
                 self.push_to_network(step, self.sender.output_queue.get())
             if not self.receiver.output_queue.empty():
                 self.push_to_network(step, self.receiver.output_queue.get())
+
+        # Empty all the queues
+        while not self.network_queue.empty():
+            self.network_queue.get()
+        while not self.sender.input_queue.empty():
+            self.sender.input_queue.get()
+        while not self.receiver.input_queue.empty():
+            self.receiver.input_queue.get()
+        while not self.sender.output_queue.empty():
+            self.sender.output_queue.get()
+        while not self.receiver.output_queue.empty():
+            self.receiver.output_queue.get()
+        
+        # Close the connection
+        self.sender.sess = None
+        while True:
+            self.sender.step()
+            self.receiver.step()
+
+            if not self.network_queue.empty():
+                (timeout, _) = peek(self.network_queue)
+                if step >= timeout:
+                    (_, seg) = self.network_queue.get()
+                    if seg.dst == "sender":
+                        self.sender.input_queue.put(seg)
+                    elif seg.dst == "receiver":
+                        if seg.msg == 'dogerroger':
+                            break
+                        self.receiver.input_queue.put(seg)
+                    else:
+                        raise RuntimeError('Unknown destination: {}'.format(seg.dst))
+            
+            if not self.sender.output_queue.empty():
+                self.push_to_network(step, self.sender.output_queue.get())
+            if not self.receiver.output_queue.empty():
+                self.push_to_network(step, self.receiver.output_queue.get())
+            step += 1
 
 def main():
     parser = argparse.ArgumentParser(
