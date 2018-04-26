@@ -25,7 +25,7 @@ optional arguments:
                         delay between application-level messages (default: 2)
   --net-delay NET_DELAY
                         network-level segment delay (default: 1
-  --corr CORR_PROB      liklihood of segment corruption (default: 0.25)
+  --corr CORR_PROB      likelihood of segment corruption (default: 0.25)
   --drop DROP_PROB      likelihood of dropped packets (default: 0.0)
 ~~~
 
@@ -33,4 +33,5 @@ optional arguments:
 
 * Evan Holt (holtevan) and Liat Berkowitz (berkowit)
 * Used Python 2
-* *(List of external resources that you consulted)*
+* Resources: StackExchange, Course Website, Python Documentation
+* Notes: we did not pull the last change made to the started code because we had already begun our implementation. Thus, our code reacts differently to dropped packets than other programs may. 
