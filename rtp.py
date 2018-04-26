@@ -57,11 +57,22 @@ class Simulation:
     def run(self, n):
         step = 1
         while True:
-            if not self.network_queue.empty():
-                if peek(self.network_queue)[1] == 'rogerdoger':
-                    break
             self.sender.step()
             self.receiver.step()
+
+            if not self.network_queue.empty():
+                (timeout, _) = peek(self.network_queue)
+                if step >= timeout:
+                    (_, seg) = self.network_queue.get()
+                    if seg.dst == "sender":
+                        self.sender.input_queue.put(seg)
+                    elif seg.dst == "receiver":
+                        if seg.msg == 'rogerdoger':
+                            break
+                        self.receiver.input_queue.put(seg)
+                    else:
+                        raise RuntimeError('Unknown destination: {}'.format(seg.dst))
+            
             if not self.sender.output_queue.empty():
                 self.push_to_network(step, self.sender.output_queue.get())
                 #self.network_queue.put( (step + self.net_delay, self.sender.output_queue.get()) )
@@ -69,7 +80,7 @@ class Simulation:
                 self.push_to_network(step, self.receiver.output_queue.get())
                 #self.network_queue.put( (step + self.net_delay, self.receiver.output_queue.get()) )
             step += 1
-        self.network_queue.get()
+        
         for step in range(1, n+1):
             print('Step {}:'.format(step))
             # 1. Step the sender and receiver
