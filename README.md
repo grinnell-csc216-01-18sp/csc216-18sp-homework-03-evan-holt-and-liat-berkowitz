@@ -33,5 +33,5 @@ optional arguments:
 
 * Evan Holt (holtevan) and Liat Berkowitz (berkowit)
 * Used Python 2
-* Resources: StackExchange, Course Website, Python Documentation
+* Resources: StackOverflow, Course Website, Python Documentation
 * Notes: we did not pull the last change made to the started code because we had already begun our implementation. Thus, our code reacts differently to dropped packets than other programs may. 
